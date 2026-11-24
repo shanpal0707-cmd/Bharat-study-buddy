@@ -53,18 +53,33 @@ app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
 if not app.config["SECRET_KEY"]:
     raise RuntimeError("FLASK_SECRET_KEY is missing from .env")
 
+IS_PRODUCTION = (
+    os.getenv("RENDER") is not None
+    or os.getenv("FLASK_ENV") == "production"
+    or os.getenv("ENV") == "production"
+    or os.getenv("SESSION_COOKIE_SECURE", "").lower() in ("true", "1")
+)
+
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False  # Local development only
+if IS_PRODUCTION:
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
+    app.config["SESSION_COOKIE_SECURE"] = True
+else:
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = False  # Local development
 
 CORS(
     app,
     supports_credentials=True,
-    origins=["http://127.0.0.1:5500",
-             "http://127.0.0.1:5501",
+    origins=[
+        "https://bharat-study-buddy.vercel.app",
+        "http://127.0.0.1:5500",
+        "http://127.0.0.1:5501",
         "http://localhost:5500",
         "http://localhost:5501",
-        ]
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
 )
 
 # Guru AI Voice Assistant Blueprint

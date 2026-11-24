@@ -15,7 +15,9 @@
  */
 
 (function () {
-    const API_BASE = "http://127.0.0.1:5000";
+    const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+        ? "http://127.0.0.1:5000"
+        : "https://bharat-study-buddy.onrender.com";
 
     // Assistant State
     let isOpen = false;
@@ -435,7 +437,7 @@
         if (recognition && isWebSpeechRecording) {
             try {
                 recognition.stop();
-            } catch (e) {}
+            } catch (e) { }
         }
         isWebSpeechRecording = false;
         if (chatMicBtn) chatMicBtn.classList.remove("recording");
@@ -667,12 +669,12 @@
             citationsHtml = `
                 <div class="guru-citations">
                     ${sources.map(s => {
-                        let ref = s.source;
-                        if (ref === "PDF") ref += ` Page ${s.page}`;
-                        else if (ref === "PPT") ref += ` Slide ${s.slide}`;
-                        else if (ref === "VIDEO") ref += ` ${s.start}s`;
-                        return `<span class="guru-source-pill">📄 ${ref}</span>`;
-                    }).join("")}
+                let ref = s.source;
+                if (ref === "PDF") ref += ` Page ${s.page}`;
+                else if (ref === "PPT") ref += ` Slide ${s.slide}`;
+                else if (ref === "VIDEO") ref += ` ${s.start}s`;
+                return `<span class="guru-source-pill">📄 ${ref}</span>`;
+            }).join("")}
                 </div>
             `;
         }
@@ -1035,26 +1037,26 @@
             });
             const data = await res.json();
             if (data.success) datesList = data.exam_dates || [];
-        } catch (e) {}
+        } catch (e) { }
 
         const datesHtml = datesList.length > 0 ? `
             <div class="guru-exam-grid">
                 ${datesList.map(d => {
-                    let pillClass = "normal";
-                    let daysText = `${d.days_remaining} days left`;
-                    if (d.days_remaining !== null) {
-                        if (d.days_remaining <= 2) { pillClass = "urgent"; daysText = `⚠️ ${d.days_remaining} days left!`; }
-                        else if (d.days_remaining <= 7) { pillClass = "soon"; daysText = `⏳ ${d.days_remaining} days left`; }
-                        else if (d.days_remaining < 0) { pillClass = "past"; daysText = `Done`; }
-                    }
-                    return `
+            let pillClass = "normal";
+            let daysText = `${d.days_remaining} days left`;
+            if (d.days_remaining !== null) {
+                if (d.days_remaining <= 2) { pillClass = "urgent"; daysText = `⚠️ ${d.days_remaining} days left!`; }
+                else if (d.days_remaining <= 7) { pillClass = "soon"; daysText = `⏳ ${d.days_remaining} days left`; }
+                else if (d.days_remaining < 0) { pillClass = "past"; daysText = `Done`; }
+            }
+            return `
                         <div class="guru-exam-card">
                             <h4 class="guru-exam-subject">${d.subject}</h4>
                             <div class="guru-exam-date-row">📅 ${d.exam_date}</div>
                             <span class="guru-countdown-pill ${pillClass}">${daysText}</span>
                         </div>
                     `;
-                }).join("")}
+        }).join("")}
             </div>
         ` : `<p style="color:#64748b; font-size:13px;">No exam dates saved yet.</p>`;
 

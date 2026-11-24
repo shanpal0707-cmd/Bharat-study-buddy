@@ -3,7 +3,9 @@
    BHARAT STUDY BUDDY — DASHBOARD
 ========================================================= */
 
-const API_BASE = "http://127.0.0.1:5000";
+const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://127.0.0.1:5000"
+    : "https://bharat-study-buddy.onrender.com";
 
 /* =========================================================
    LOGGED-IN USER
