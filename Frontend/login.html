@@ -361,14 +361,20 @@
         signupTab.addEventListener("click", () => switchTab("signup"));
 
         async function sendRequest(endpoint, data) {
-            const response = await fetch(API_BASE + endpoint, {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(data)
-            });
+            let response;
+            try {
+                response = await fetch(API_BASE + endpoint, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                });
+            } catch (networkErr) {
+                console.error("Network error:", networkErr);
+                throw new Error("Unable to connect to the server. If this is the first request, the server may be waking up from sleep (Render cold start); please wait a moment and try again.");
+            }
 
             const result = await response.json().catch(() => ({}));
 
@@ -376,7 +382,15 @@
             console.log("API RESPONSE:", result);
 
             if (!response.ok || result.success !== true) {
-                throw new Error(result.message || "Something went wrong.");
+                const errorMsg = result.message || (
+                    response.status === 401 ? "Invalid email or password." :
+                    response.status === 503 ? (result.message || "Email verification service is not configured on the server.") :
+                    response.status === 502 ? (result.message || "Email delivery failed. Please check your email address.") :
+                    response.status === 504 ? (result.message || "Mail server connection timed out. Please try again.") :
+                    response.status === 409 ? (result.message || "This email is already registered. Please log in.") :
+                    "Request returned status " + response.status
+                );
+                throw new Error(errorMsg);
             }
 
             return result;
@@ -405,7 +419,7 @@
                 showMessage("Login successful! Opening dashboard...", "success");
 
                 setTimeout(() => {
-                    window.location.href = "/dashboard.html";
+                    window.location.href = "dashboard.html";
                 }, 700);
 
             } catch (error) {

@@ -6,6 +6,8 @@ import re
 import time
 import secrets
 import smtplib
+import socket
+from datetime import timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html import escape
@@ -67,6 +69,8 @@ if IS_PRODUCTION:
 else:
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["SESSION_COOKIE_SECURE"] = False  # Local development
+
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 
 CORS(
     app,
@@ -864,21 +868,9 @@ STUDY MATERIAL:
 # =========================================================
 
 def send_otp_email(to_email, recipient_name, otp):
-    mail_server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip()
-    mail_port = int(os.getenv("MAIL_PORT", "587").strip() or 587)
-    mail_use_tls = os.getenv("MAIL_USE_TLS", "true").strip().lower() in ("true", "1", "yes")
-    mail_username = os.getenv("MAIL_USERNAME", "").strip()
-    mail_password = os.getenv("MAIL_PASSWORD", "").strip()
-    mail_sender = os.getenv("MAIL_DEFAULT_SENDER", "").strip() or mail_username
-
-    if not mail_username or not mail_password:
-        raise ValueError("Email credentials not configured")
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Bharat Study Buddy - Email Verification Code"
-    msg["From"] = f"Bharat Study Buddy <{mail_sender}>" if mail_sender else mail_username
-    msg["To"] = to_email
-
+    """Sends OTP verification email using Gmail SMTP or Resend API.
+    Supports standard env aliases and never leaks credentials in logs.
+    """
     text_content = (
         f"Hello {recipient_name},\n\n"
         f"Your Bharat Study Buddy verification code is: {otp}\n\n"
@@ -897,14 +889,109 @@ def send_otp_email(to_email, recipient_name, otp):
         f"</div>"
     )
 
-    msg.attach(MIMEText(text_content, "plain", "utf-8"))
-    msg.attach(MIMEText(html_content, "html", "utf-8"))
+    # 1. Check Resend API if configured
+    resend_api_key = os.getenv("RESEND_API_KEY", "").strip().strip("'\"")
+    resend_from = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev").strip().strip("'\"")
 
-    with smtplib.SMTP(mail_server, mail_port, timeout=15) as server:
-        if mail_use_tls:
-            server.starttls()
-        server.login(mail_username, mail_password)
-        server.send_message(msg)
+    # 2. Check SMTP with standard aliases
+    mail_username = (
+        os.getenv("MAIL_USERNAME")
+        or os.getenv("SMTP_USER")
+        or os.getenv("SMTP_USERNAME")
+        or os.getenv("EMAIL_USER")
+        or ""
+    ).strip().strip("'\"")
+
+    mail_password = (
+        os.getenv("MAIL_PASSWORD")
+        or os.getenv("SMTP_PASSWORD")
+        or os.getenv("SMTP_PASS")
+        or os.getenv("EMAIL_PASSWORD")
+        or ""
+    ).strip().strip("'\"")
+
+    mail_server = (
+        os.getenv("MAIL_SERVER")
+        or os.getenv("SMTP_SERVER")
+        or os.getenv("SMTP_HOST")
+        or "smtp.gmail.com"
+    ).strip().strip("'\"")
+
+    port_str = (
+        os.getenv("MAIL_PORT")
+        or os.getenv("SMTP_PORT")
+        or "587"
+    ).strip().strip("'\"")
+    mail_port = int(port_str) if port_str.isdigit() else 587
+
+    mail_use_tls = (
+        os.getenv("MAIL_USE_TLS")
+        or os.getenv("SMTP_USE_TLS")
+        or "true"
+    ).strip().lower() in ("true", "1", "yes")
+
+    mail_use_ssl = (
+        os.getenv("MAIL_USE_SSL")
+        or os.getenv("SMTP_USE_SSL")
+        or ("true" if mail_port == 465 else "false")
+    ).strip().lower() in ("true", "1", "yes")
+
+    mail_sender = (
+        os.getenv("MAIL_DEFAULT_SENDER")
+        or os.getenv("SMTP_FROM")
+        or os.getenv("MAIL_FROM")
+        or mail_username
+    ).strip().strip("'\"")
+
+    # Gmail app passwords may have internal spaces (e.g. "abcd efgh ijkl mnop") - remove them
+    if "gmail.com" in mail_server.lower() and mail_password:
+        mail_password = mail_password.replace(" ", "")
+
+    # Try SMTP if credentials exist
+    if mail_username and mail_password:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Bharat Study Buddy - Email Verification Code"
+        msg["From"] = f"Bharat Study Buddy <{mail_sender}>" if mail_sender else mail_username
+        msg["To"] = to_email
+        msg.attach(MIMEText(text_content, "plain", "utf-8"))
+        msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+        if mail_use_ssl or mail_port == 465:
+            with smtplib.SMTP_SSL(mail_server, mail_port, timeout=15) as server:
+                server.login(mail_username, mail_password)
+                server.send_message(msg)
+                return
+        else:
+            with smtplib.SMTP(mail_server, mail_port, timeout=15) as server:
+                if mail_use_tls:
+                    server.starttls()
+                server.login(mail_username, mail_password)
+                server.send_message(msg)
+                return
+
+    # Try Resend API if SMTP not configured or as fallback
+    if resend_api_key:
+        import requests
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": f"Bharat Study Buddy <{resend_from}>",
+                "to": [to_email],
+                "subject": "Bharat Study Buddy - Email Verification Code",
+                "text": text_content,
+                "html": html_content
+            },
+            timeout=15
+        )
+        if resp.status_code in (200, 201):
+            return
+        raise RuntimeError(f"Resend delivery failed with status {resp.status_code}")
+
+    raise ValueError("Neither SMTP (MAIL_USERNAME/MAIL_PASSWORD) nor RESEND_API_KEY is configured.")
 
 
 @app.route("/api/auth/send-otp", methods=["POST"])
@@ -936,14 +1023,33 @@ def send_signup_otp():
         }), 400
 
     dev_mode = os.getenv("OTP_DEV_MODE", "false").strip().lower() == "true"
-    mail_username = os.getenv("MAIL_USERNAME", "").strip()
-    mail_password = os.getenv("MAIL_PASSWORD", "").strip()
+    mail_username = (
+        os.getenv("MAIL_USERNAME")
+        or os.getenv("SMTP_USER")
+        or os.getenv("SMTP_USERNAME")
+        or os.getenv("EMAIL_USER")
+        or ""
+    ).strip()
+    mail_password = (
+        os.getenv("MAIL_PASSWORD")
+        or os.getenv("SMTP_PASSWORD")
+        or os.getenv("SMTP_PASS")
+        or os.getenv("EMAIL_PASSWORD")
+        or ""
+    ).strip()
+    resend_api_key = os.getenv("RESEND_API_KEY", "").strip()
 
-    if not dev_mode and (not mail_username or not mail_password):
+    has_email_service = bool((mail_username and mail_password) or resend_api_key)
+
+    if not dev_mode and not has_email_service:
         return jsonify({
             "success": False,
-            "message": "Email service is not configured. Check the server .env file."
-        }), 500
+            "message": (
+                "Email verification is not configured on Render. "
+                "Please configure MAIL_USERNAME and MAIL_PASSWORD (or RESEND_API_KEY) "
+                "in Render Environment Variables."
+            )
+        }), 503
 
     connection = get_connection()
     now = int(time.time())
@@ -984,22 +1090,28 @@ def send_signup_otp():
                 send_otp_email(email, name, otp)
                 success_message = "Verification code sent to your email."
             except smtplib.SMTPAuthenticationError:
-                print("SMTP AUTHENTICATION ERROR: Invalid Gmail credentials.")
+                app.logger.error("SMTP Authentication Error: Invalid Gmail/mail credentials.")
                 return jsonify({
                     "success": False,
-                    "message": "Email authentication failed. Please check your Gmail App Password."
+                    "message": "Email authentication failed. Please verify your Gmail App Password."
                 }), 502
             except smtplib.SMTPRecipientsRefused:
-                print("SMTP RECIPIENT ERROR: Recipient address rejected.")
+                app.logger.error("SMTP Recipient Error: Recipient address rejected.")
                 return jsonify({
                     "success": False,
                     "message": "Recipient email address was rejected by the mail server."
                 }), 400
-            except Exception as error:
-                print("SMTP EMAIL ERROR:", type(error).__name__)
+            except (smtplib.SMTPConnectError, socket.timeout, TimeoutError) as net_err:
+                app.logger.error("SMTP Connection Error: %s", type(net_err).__name__)
                 return jsonify({
                     "success": False,
-                    "message": "Failed to send verification email. Please try again."
+                    "message": "Connection to mail server timed out. Check port/TLS settings or use port 465 (SSL)."
+                }), 504
+            except Exception as error:
+                app.logger.error("EMAIL SEND ERROR: %s", type(error).__name__)
+                return jsonify({
+                    "success": False,
+                    "message": "Failed to send verification email. Please check server email settings."
                 }), 502
 
         connection.execute("""
@@ -1199,6 +1311,7 @@ def login():
         }), 401
 
     session.clear()
+    session.permanent = True
     session["user_id"] = user["id"]
     session["user_name"] = user["name"]
     session["user_email"] = user["email"]

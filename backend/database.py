@@ -144,6 +144,94 @@ def _create_schema(conn):
     """)
 
 
+# Seed data for existing registered users so they persist across fresh/ephemeral deployments.
+# Uses exact original password hashes and creation timestamps.
+INITIAL_USERS = [
+    (
+        2,
+        "S",
+        "s@gmail.com",
+        "scrypt:32768:8:1$XX8GaLfNqKIuiKKS$5c5542d2b1b8e6e8285547a03dddccc8d9543265fab6017fe2ce446eb493a1c169e1a7add6a0d04b1f73a77220488ab79016e82d33b46a87da08eb8e74d9456a",
+        "2026-10-11 13:57:42"
+    ),
+    (
+        3,
+        "d",
+        "d@gmail.com",
+        "scrypt:32768:8:1$pYi10itcpoKzAyW7$a391b7aee46d1c94f998a82daddf55a7a75d8259dd81c6697f23f9fbcc7a9afaf8c1b5968d2f35eaa19ef69fe4b085a810f4fefa99d963e7e956f091df3632fa",
+        "2026-10-11 14:25:39"
+    ),
+    (
+        4,
+        "wow",
+        "wow.digitalmarketing77@gmail.com",
+        "scrypt:32768:8:1$q0SjnMMrt9bJABnx$54b4ed4f562b029028d5943a8da33922315490bb0b232fdf7d8e24b32b79b1581ff24b19f8560e65365c41a838e4214e614ec551053931c10b75341205358534",
+        "2026-10-12 09:14:37"
+    ),
+    (
+        8,
+        "shivani",
+        "shivanipal63435@gmail.com",
+        "scrypt:32768:8:1$22MFGl4lJhsOfC0G$b4becd033f20d37e7dc4b947adebfa69628405e763c535aef93d7460519dd3975f8efb3d042efb4ea9604e1efdfe442d9675b124bee1c978189ca2f0a011d53c",
+        "2026-10-13 18:47:09"
+    )
+]
+
+INITIAL_PLANS = [
+    (
+        5,
+        3,
+        "Study Plan",
+        '["DBMS"]',
+        "2026-11-28",
+        3.0,
+        '["SQL Commands"]',
+        "2026-11-24 08:04:39"
+    )
+]
+
+INITIAL_TASKS = [
+    (85, 5, 3, "2026-11-25", "DBMS", "SQL SELECT basics", "18:00", 60, 0, None),
+    (86, 5, 3, "2026-11-25", "DBMS", "SQL WHERE & ORDER BY", "19:00", 60, 0, None),
+    (87, 5, 3, "2026-11-25", "DBMS", "Normalization introduction", "20:00", 60, 0, None),
+    (88, 5, 3, "2026-11-26", "DBMS", "1NF concepts", "18:00", 45, 0, None),
+    (89, 5, 3, "2026-11-26", "DBMS", "2NF concepts", "18:45", 45, 0, None),
+    (90, 5, 3, "2026-11-26", "DBMS", "3NF concepts", "19:30", 45, 0, None),
+    (91, 5, 3, "2026-11-26", "DBMS", "SQL JOINs practice", "20:15", 45, 0, None),
+    (92, 5, 3, "2026-11-27", "DBMS", "Normalization exercises", "18:00", 90, 0, None),
+    (93, 5, 3, "2026-11-27", "DBMS", "SQL Commands practice", "19:30", 90, 0, None),
+    (94, 5, 3, "2026-11-28", "DBMS", "Normalization revision", "18:00", 60, 0, None),
+    (95, 5, 3, "2026-11-28", "DBMS", "SQL Commands quick review", "19:00", 60, 0, None),
+    (96, 5, 3, "2026-11-28", "DBMS", "Mock test (DBMS)", "20:00", 60, 0, None)
+]
+
+
+def _seed_initial_data(conn):
+    """Safely populates initial seed records using INSERT OR IGNORE.
+    Ensures existing registered accounts and initial study data persist on fresh/ephemeral deployments.
+    Never overwrites or alters existing rows.
+    """
+    for user in INITIAL_USERS:
+        conn.execute("""
+            INSERT OR IGNORE INTO users (id, name, email, password, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, user)
+
+    for plan in INITIAL_PLANS:
+        conn.execute("""
+            INSERT OR IGNORE INTO study_plans
+                (id, user_id, title, subjects, exam_date, daily_hours, weak_subjects, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, plan)
+
+    for task in INITIAL_TASKS:
+        conn.execute("""
+            INSERT OR IGNORE INTO study_tasks
+                (id, plan_id, user_id, task_date, subject, topic, start_time, duration_minutes, is_completed, completed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, task)
+
+
 def init_database():
     """Initializes the database schema if tables do not exist.
     Completely idempotent: creates missing tables without altering or resetting existing data.
@@ -156,6 +244,7 @@ def init_database():
         conn = _connect_raw()
         try:
             _create_schema(conn)
+            _seed_initial_data(conn)
             conn.commit()
             _initialized = True
             logger.info("Database schema initialized successfully.")
@@ -183,8 +272,15 @@ def ensure_database(force=False):
             if missing:
                 logger.warning("Missing database tables detected: %s. Creating schema...", missing)
                 _create_schema(conn)
+                _seed_initial_data(conn)
                 conn.commit()
                 logger.info("Created missing tables successfully.")
+            else:
+                user_count = conn.execute("SELECT count(*) FROM users").fetchone()[0]
+                if user_count == 0:
+                    logger.info("Seeding initial users into empty users table...")
+                    _seed_initial_data(conn)
+                    conn.commit()
             _initialized = True
         finally:
             conn.close()
