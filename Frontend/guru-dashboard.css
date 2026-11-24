@@ -1,0 +1,970 @@
+/* =========================================================
+   BHARAT STUDY BUDDY — DASHBOARD GURU FLOATING ASSISTANT
+   Polished Floating Voice Assistant UI & Academic Tools
+========================================================= */
+
+/* 1. Floating Launcher Button (Fixed bottom-right) */
+.guru-launcher.guru-dashboard-launcher {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #ffffff;
+    border: none;
+    padding: 12px 22px 12px 14px;
+    border-radius: 50px;
+    box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.45), 0 8px 10px -6px rgba(79, 70, 229, 0.3);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+}
+
+.guru-launcher.guru-dashboard-launcher:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 14px 28px -4px rgba(79, 70, 229, 0.55), 0 10px 14px -6px rgba(79, 70, 229, 0.35);
+}
+
+.guru-launcher-icon {
+    width: 36px;
+    height: 36px;
+    background: #ffffff;
+    color: #4f46e5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    position: relative;
+}
+
+.guru-pulse-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    background: #10b981;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: guru-pulse 2s infinite;
+}
+
+@keyframes guru-pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* 2. Floating Assistant Panel Window */
+.guru-popup.guru-dashboard-popup {
+    position: fixed;
+    bottom: 88px;
+    right: 28px;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    height: 650px;
+    max-height: calc(100vh - 105px);
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(226, 232, 240, 0.9);
+    display: flex;
+    flex-direction: column;
+    z-index: 10000;
+    overflow: hidden;
+    font-family: inherit;
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+    pointer-events: none;
+    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.guru-popup.guru-dashboard-popup.active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* 3. Panel Header */
+.guru-header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+    color: #ffffff;
+    padding: 13px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+    z-index: 5;
+}
+
+.guru-header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.guru-avatar {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(4px);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+}
+
+.guru-header-text h3 {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+.guru-header-text p {
+    margin: 2px 0 0 0;
+    font-size: 11px;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #c7d2fe;
+}
+
+.guru-header-text p span {
+    width: 7px;
+    height: 7px;
+    background: #34d399;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.guru-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.guru-icon-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.guru-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.guru-icon-btn.active {
+    background: #ffffff;
+    color: #4f46e5;
+}
+
+/* 4. Voice Chat Interface Box */
+.guru-voice-box {
+    background: linear-gradient(150deg, #1e1b4b 0%, #2e1065 50%, #312e81 100%);
+    color: #ffffff;
+    padding: 14px 16px 12px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.guru-voice-top-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+/* Status Badge */
+.guru-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 50px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.guru-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #94a3b8;
+    transition: background 0.3s;
+}
+
+.guru-status-badge.idle .guru-status-dot { background: #94a3b8; }
+.guru-status-badge.listening {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: #6ee7b7;
+}
+.guru-status-badge.listening .guru-status-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: guru-pulse-green 1.2s infinite;
+}
+
+.guru-status-badge.thinking {
+    background: rgba(168, 85, 247, 0.25);
+    border-color: rgba(192, 132, 252, 0.4);
+    color: #e9d5ff;
+}
+.guru-status-badge.thinking .guru-status-dot {
+    background: #c084fc;
+    box-shadow: 0 0 8px #c084fc;
+    animation: guru-pulse-purple 1s infinite;
+}
+
+.guru-status-badge.speaking {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: #93c5fd;
+}
+.guru-status-badge.speaking .guru-status-dot {
+    background: #38bdf8;
+    box-shadow: 0 0 8px #38bdf8;
+    animation: guru-pulse-blue 0.8s infinite;
+}
+
+.guru-status-badge.muted {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(248, 113, 113, 0.4);
+    color: #fca5a5;
+}
+.guru-status-badge.muted .guru-status-dot { background: #ef4444; }
+
+@keyframes guru-pulse-green {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes guru-pulse-purple {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(192, 132, 252, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(192, 132, 252, 0); }
+}
+
+@keyframes guru-pulse-blue {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 7px rgba(56, 189, 248, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+}
+
+/* Voice Controls */
+.guru-voice-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.guru-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px 8px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.guru-switch {
+    position: relative;
+    display: inline-block;
+    width: 28px;
+    height: 16px;
+}
+
+.guru-switch input { opacity: 0; width: 0; height: 0; }
+
+.guru-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.3);
+    transition: .3s;
+    border-radius: 20px;
+}
+
+.guru-slider:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+.guru-switch input:checked + .guru-slider { background-color: #10b981; }
+.guru-switch input:checked + .guru-slider:before { transform: translateX(12px); }
+
+.guru-stop-btn {
+    background: rgba(239, 68, 68, 0.25);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    color: #fca5a5;
+    padding: 3px 9px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+}
+
+.guru-stop-btn.active { display: inline-flex; }
+.guru-stop-btn:hover { background: #ef4444; color: #ffffff; }
+
+/* Central Voice Orb */
+.guru-orb-stage {
+    position: relative;
+    width: 82px;
+    height: 82px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2px 0 8px 0;
+}
+
+.guru-orb-ring {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.guru-orb-ring.r1 {
+    width: 74px;
+    height: 74px;
+    border: 1.5px dashed rgba(165, 180, 252, 0.35);
+    animation: guru-spin 14s linear infinite;
+}
+
+.guru-orb-ring.r2 {
+    width: 86px;
+    height: 86px;
+    border: 1px solid rgba(165, 180, 252, 0.18);
+    animation: guru-spin-reverse 20s linear infinite;
+}
+
+@keyframes guru-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes guru-spin-reverse {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+}
+
+.guru-orb-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border: 2.5px solid rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.5);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+    z-index: 3;
+}
+
+.guru-orb-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 12px 28px rgba(79, 70, 229, 0.7);
+}
+
+.guru-orb-btn.listening {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #34d399;
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.85);
+    animation: guru-orb-pulse 1.3s infinite;
+}
+
+.guru-orb-btn.speaking {
+    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+    border-color: #7dd3fc;
+    box-shadow: 0 0 24px rgba(56, 189, 248, 0.85);
+    animation: guru-orb-pulse 1.1s infinite;
+}
+
+@keyframes guru-orb-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+}
+
+/* Waveform Visualizer Canvas */
+.guru-waveform-container {
+    width: 200px;
+    height: 24px;
+    margin-bottom: 4px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#guruWaveformCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Spoken Prompt / Status Text */
+.guru-hero-transcript {
+    font-size: 12px;
+    color: #e0e7ff;
+    text-align: center;
+    max-width: 90%;
+    min-height: 16px;
+    margin: 0 0 8px 0;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Quick Academic Tool Chips */
+.guru-tool-chips {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    width: 100%;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+}
+
+.guru-tool-chips::-webkit-scrollbar { display: none; }
+
+.guru-tool-chip {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+}
+
+.guru-tool-chip:hover {
+    background: #ffffff;
+    color: #312e81;
+    transform: translateY(-1px);
+}
+
+/* 5. Text Conversation Area (Immediately below voice controls) */
+.guru-chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: #f8fafc;
+}
+
+.guru-chat-feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+    background: #f8fafc;
+}
+
+/* Custom Scrollbar */
+.guru-chat-feed::-webkit-scrollbar {
+    width: 5px;
+}
+.guru-chat-feed::-webkit-scrollbar-track {
+    background: transparent;
+}
+.guru-chat-feed::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.guru-chat-feed::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Chat Bubbles */
+.guru-bubble {
+    display: flex;
+    flex-direction: column;
+    max-width: 86%;
+    animation: guru-slide-in 0.22s ease-out;
+}
+
+@keyframes guru-slide-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.guru-bubble.bot { align-self: flex-start; }
+.guru-bubble.user { align-self: flex-end; }
+
+.guru-bubble-content {
+    padding: 11px 15px;
+    font-size: 13px;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+.guru-bubble.bot .guru-bubble-content {
+    background: #ffffff;
+    color: #1e293b;
+    border-radius: 16px 16px 16px 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 0 1px #e2e8f0;
+}
+
+.guru-bubble.user .guru-bubble-content {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #ffffff;
+    border-radius: 16px 16px 4px 16px;
+    box-shadow: 0 3px 10px rgba(79, 70, 229, 0.28);
+}
+
+.guru-bubble-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 0 4px;
+    font-size: 10px;
+    color: #94a3b8;
+}
+
+.guru-bubble.user .guru-bubble-meta { justify-content: flex-end; }
+
+.guru-listen-again-btn {
+    background: none;
+    border: none;
+    color: #6366f1;
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 1px 5px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: background 0.2s;
+}
+
+.guru-listen-again-btn:hover { background: #eef2ff; }
+
+/* Source Citations Badges */
+.guru-citations {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.guru-source-pill {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 500;
+}
+
+/* Typing / Thinking Indicator */
+.guru-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.guru-typing span {
+    width: 6px;
+    height: 6px;
+    background: #818cf8;
+    border-radius: 50%;
+    animation: guru-bounce 1.4s infinite ease-in-out both;
+}
+
+.guru-typing span:nth-child(1) { animation-delay: -0.32s; }
+.guru-typing span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes guru-bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+/* 6. Polished Chat Footer & Input */
+.guru-chat-footer {
+    padding: 10px 12px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.guru-chat-input {
+    flex: 1;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    padding: 9px 14px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.guru-chat-input:focus {
+    border-color: #6366f1;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.guru-chat-mic-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #f1f5f9;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.2s;
+    outline: none;
+    flex-shrink: 0;
+}
+
+.guru-chat-mic-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.guru-chat-mic-btn.recording {
+    background: #fee2e2;
+    color: #dc2626;
+    animation: guru-pulse 1.4s infinite;
+}
+
+.guru-chat-send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    outline: none;
+    box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
+    flex-shrink: 0;
+}
+
+.guru-chat-send-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.45);
+}
+
+/* 7. Academic Tool Modals (Flashcards, Paper Analyzer, Exam Countdown) */
+.guru-panel-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.guru-modal {
+    background: #ffffff;
+    width: 100%;
+    max-width: 580px;
+    max-height: 85vh;
+    border-radius: 18px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: guru-modal-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes guru-modal-enter {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.guru-modal-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.guru-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.guru-modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #ffffff;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.guru-modal-close:hover { background: rgba(255, 255, 255, 0.35); }
+
+.guru-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #334155;
+}
+
+/* 3D Interactive Flashcard */
+.guru-flashcard-stage {
+    perspective: 1000px;
+    width: 100%;
+    min-height: 230px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0 16px 0;
+}
+
+.guru-flashcard {
+    width: 100%;
+    min-height: 220px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.guru-flashcard.flipped { transform: rotateY(180deg); }
+
+.guru-card-front, .guru-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 14px;
+    padding: 24px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.guru-card-front {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #e2e8f0;
+    color: #0f172a;
+}
+
+.guru-card-back {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    border: 2px solid #6366f1;
+    color: #ffffff;
+    transform: rotateY(180deg);
+}
+
+.guru-card-tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #eef2ff;
+    color: #4f46e5;
+    align-self: flex-start;
+}
+
+.guru-card-back .guru-card-tag {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.guru-card-text {
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 16px 0;
+}
+
+.guru-card-hint {
+    font-size: 11.5px;
+    color: #94a3b8;
+    text-align: right;
+}
+
+.guru-card-back .guru-card-hint { color: #c7d2fe; }
+
+.guru-flashcard-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.guru-card-btn {
+    background: #4f46e5;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.guru-card-btn:hover { background: #4338ca; }
+.guru-card-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.guru-card-btn.secondary { background: #f1f5f9; color: #475569; }
+.guru-card-btn.secondary:hover { background: #e2e8f0; }
+
+/* Exam Countdown Grid */
+.guru-exam-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.guru-exam-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.guru-exam-subject {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.guru-exam-date-row {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.guru-countdown-pill {
+    align-self: flex-start;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+.guru-countdown-pill.normal { background: #e0e7ff; color: #4338ca; }
+.guru-countdown-pill.soon { background: #fef3c7; color: #b45309; }
+.guru-countdown-pill.urgent { background: #fee2e2; color: #dc2626; }
+.guru-countdown-pill.past { background: #f1f5f9; color: #94a3b8; }
+
+/* 8. Mobile Responsiveness */
+@media (max-width: 600px) {
+    .guru-launcher.guru-dashboard-launcher {
+        bottom: 20px;
+        right: 20px;
+        padding: 10px 16px 10px 12px;
+        font-size: 13.5px;
+    }
+
+    .guru-popup.guru-dashboard-popup {
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+        width: auto;
+        height: calc(100vh - 32px);
+        max-height: calc(100vh - 32px);
+        border-radius: 16px;
+    }
+}
