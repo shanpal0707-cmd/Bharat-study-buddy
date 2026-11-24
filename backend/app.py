@@ -7,6 +7,7 @@ import time
 import secrets
 import smtplib
 import socket
+import requests
 from datetime import timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -868,8 +869,9 @@ STUDY MATERIAL:
 # =========================================================
 
 def send_otp_email(to_email, recipient_name, otp):
-    """Sends OTP verification email using Gmail SMTP or Resend API.
-    Supports standard env aliases and never leaks credentials in logs.
+    """Sends OTP verification email using Resend HTTPS API as primary provider,
+    with Gmail/SMTP as fallback if Resend is unavailable.
+    Never exposes passwords or API keys in logs.
     """
     text_content = (
         f"Hello {recipient_name},\n\n"
@@ -889,11 +891,43 @@ def send_otp_email(to_email, recipient_name, otp):
         f"</div>"
     )
 
-    # 1. Check Resend API if configured
+    # =========================================================
+    # 1. PRIMARY: Resend API (HTTPS port 443 - reliable on cloud hosts)
+    # =========================================================
     resend_api_key = os.getenv("RESEND_API_KEY", "").strip().strip("'\"")
     resend_from = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev").strip().strip("'\"")
+    resend_error = None
 
-    # 2. Check SMTP with standard aliases
+    if resend_api_key:
+        try:
+            resp = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {resend_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "from": f"Bharat Study Buddy <{resend_from}>",
+                    "to": [to_email],
+                    "subject": "Bharat Study Buddy - Email Verification Code",
+                    "text": text_content,
+                    "html": html_content
+                },
+                timeout=12
+            )
+            if resp.status_code in (200, 201):
+                app.logger.info("OTP verification email sent successfully via Resend API.")
+                return
+            else:
+                resend_error = f"HTTP {resp.status_code}"
+                app.logger.warning("Resend API response: %s. Attempting fallback...", resp.status_code)
+        except Exception as res_exc:
+            resend_error = type(res_exc).__name__
+            app.logger.warning("Resend API error (%s). Attempting fallback...", type(res_exc).__name__)
+
+    # =========================================================
+    # 2. FALLBACK: Gmail / Custom SMTP
+    # =========================================================
     mail_username = (
         os.getenv("MAIL_USERNAME")
         or os.getenv("SMTP_USER")
@@ -943,55 +977,44 @@ def send_otp_email(to_email, recipient_name, otp):
         or mail_username
     ).strip().strip("'\"")
 
-    # Gmail app passwords may have internal spaces (e.g. "abcd efgh ijkl mnop") - remove them
+    # Strip whitespace from Gmail app passwords
     if "gmail.com" in mail_server.lower() and mail_password:
         mail_password = mail_password.replace(" ", "")
 
-    # Try SMTP if credentials exist
     if mail_username and mail_password:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Bharat Study Buddy - Email Verification Code"
-        msg["From"] = f"Bharat Study Buddy <{mail_sender}>" if mail_sender else mail_username
-        msg["To"] = to_email
-        msg.attach(MIMEText(text_content, "plain", "utf-8"))
-        msg.attach(MIMEText(html_content, "html", "utf-8"))
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = "Bharat Study Buddy - Email Verification Code"
+            msg["From"] = f"Bharat Study Buddy <{mail_sender}>" if mail_sender else mail_username
+            msg["To"] = to_email
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
+            msg.attach(MIMEText(html_content, "html", "utf-8"))
 
-        if mail_use_ssl or mail_port == 465:
-            with smtplib.SMTP_SSL(mail_server, mail_port, timeout=15) as server:
-                server.login(mail_username, mail_password)
-                server.send_message(msg)
-                return
-        else:
-            with smtplib.SMTP(mail_server, mail_port, timeout=15) as server:
-                if mail_use_tls:
-                    server.starttls()
-                server.login(mail_username, mail_password)
-                server.send_message(msg)
-                return
+            if mail_use_ssl or mail_port == 465:
+                with smtplib.SMTP_SSL(mail_server, mail_port, timeout=12) as server:
+                    server.login(mail_username, mail_password)
+                    server.send_message(msg)
+                    app.logger.info("OTP verification email sent successfully via SMTP SSL.")
+                    return
+            else:
+                with smtplib.SMTP(mail_server, mail_port, timeout=12) as server:
+                    if mail_use_tls:
+                        server.starttls()
+                    server.login(mail_username, mail_password)
+                    server.send_message(msg)
+                    app.logger.info("OTP verification email sent successfully via SMTP TLS.")
+                    return
+        except Exception as smtp_exc:
+            app.logger.warning("SMTP fallback failed: %s", type(smtp_exc).__name__)
+            if resend_error:
+                raise RuntimeError(f"Email delivery failed via Resend ({resend_error}) and SMTP ({type(smtp_exc).__name__})")
+            raise
 
-    # Try Resend API if SMTP not configured or as fallback
-    if resend_api_key:
-        import requests
-        resp = requests.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {resend_api_key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "from": f"Bharat Study Buddy <{resend_from}>",
-                "to": [to_email],
-                "subject": "Bharat Study Buddy - Email Verification Code",
-                "text": text_content,
-                "html": html_content
-            },
-            timeout=15
-        )
-        if resp.status_code in (200, 201):
-            return
-        raise RuntimeError(f"Resend delivery failed with status {resp.status_code}")
+    # If Resend failed and no SMTP was configured
+    if resend_error:
+        raise RuntimeError(f"Resend API email delivery failed ({resend_error}) and SMTP is not configured.")
 
-    raise ValueError("Neither SMTP (MAIL_USERNAME/MAIL_PASSWORD) nor RESEND_API_KEY is configured.")
+    raise ValueError("Neither RESEND_API_KEY nor SMTP credentials (MAIL_USERNAME/MAIL_PASSWORD) are configured.")
 
 
 @app.route("/api/auth/send-otp", methods=["POST"])
@@ -1101,12 +1124,18 @@ def send_signup_otp():
                     "success": False,
                     "message": "Recipient email address was rejected by the mail server."
                 }), 400
-            except (smtplib.SMTPConnectError, socket.timeout, TimeoutError) as net_err:
-                app.logger.error("SMTP Connection Error: %s", type(net_err).__name__)
+            except (smtplib.SMTPConnectError, socket.timeout, TimeoutError, OSError) as net_err:
+                app.logger.error("Email Connection Error: %s", type(net_err).__name__)
                 return jsonify({
                     "success": False,
-                    "message": "Connection to mail server timed out. Check port/TLS settings or use port 465 (SSL)."
-                }), 504
+                    "message": "Outbound email connection failed. Cloud hosts like Render may block SMTP port 587; please configure RESEND_API_KEY in Render."
+                }), 502
+            except RuntimeError as run_err:
+                app.logger.error("Email Delivery Failure: %s", run_err)
+                return jsonify({
+                    "success": False,
+                    "message": "Email delivery failed. Please verify your RESEND_API_KEY in Render Environment Variables."
+                }), 502
             except Exception as error:
                 app.logger.error("EMAIL SEND ERROR: %s", type(error).__name__)
                 return jsonify({
@@ -1255,6 +1284,97 @@ def verify_signup_otp():
         return jsonify({
             "success": False,
             "message": "Could not verify the code. Please try again."
+        }), 500
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# DIRECT SIGNUP (NO OTP)
+# =========================================================
+
+@app.route("/api/auth/signup", methods=["POST"])
+def direct_signup():
+    data = request.get_json(silent=True) or {}
+
+    name = str(data.get("name", "")).strip()
+    email = str(data.get("email", "")).strip().lower()
+    password = data.get("password", "")
+
+    if not name or not email or not isinstance(password, str) or not password:
+        return jsonify({
+            "success": False,
+            "message": "Full name, email address, and password are required."
+        }), 400
+
+    if len(name) > 100:
+        return jsonify({
+            "success": False,
+            "message": "Full name must be under 100 characters."
+        }), 400
+
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return jsonify({
+            "success": False,
+            "message": "Please enter a valid email address."
+        }), 400
+
+    if len(password) < 8:
+        return jsonify({
+            "success": False,
+            "message": "Password must be at least 8 characters long."
+        }), 400
+
+    connection = get_connection()
+
+    try:
+        existing = connection.execute(
+            "SELECT id FROM users WHERE email = ?", (email,)
+        ).fetchone()
+
+        if existing:
+            return jsonify({
+                "success": False,
+                "message": "This email is already registered. Please log in."
+            }), 409
+
+        cursor = connection.execute(
+            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+            (name, email, generate_password_hash(password))
+        )
+        user_id = cursor.lastrowid
+        connection.commit()
+
+        session.clear()
+        session.permanent = True
+        session["user_id"] = user_id
+        session["user_name"] = name
+        session["user_email"] = email
+
+        return jsonify({
+            "success": True,
+            "message": "Account created successfully! Redirecting to dashboard...",
+            "user": {
+                "id": user_id,
+                "name": name,
+                "email": email
+            }
+        }), 201
+
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({
+            "success": False,
+            "message": "This email is already registered. Please log in."
+        }), 409
+
+    except Exception as error:
+        connection.rollback()
+        app.logger.error("DIRECT SIGNUP ERROR: %s", error, exc_info=True)
+        return jsonify({
+            "success": False,
+            "message": "Could not create account. Please try again."
         }), 500
 
     finally:
