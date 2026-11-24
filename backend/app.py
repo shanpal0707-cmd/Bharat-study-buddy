@@ -24,14 +24,14 @@ from video_processor import transcribe_video
 from pdf_processor import extract_pdf_text
 from ppt_processor import extract_ppt_text
 from knowledge_base import save_knowledge_base, search_knowledge
-from database import init_database, get_connection
+from database import init_database, get_connection, ensure_database, get_database_path
 
 
 # =========================================================
 # CONFIGURATION
 # =========================================================
 
-ROOT_FOLDER = os.path.dirname(os.path.dirname(__file__))
+ROOT_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 load_dotenv(os.path.join(ROOT_FOLDER, ".env"))
 
@@ -89,6 +89,13 @@ app.register_blueprint(guru_bp)
 # Paper Analyzer AI Blueprint
 from paper_analyzer_routes import paper_analyzer_bp
 app.register_blueprint(paper_analyzer_bp)
+
+# Initialize SQLite database immediately upon startup (ensures tables exist under Gunicorn/Render & local dev)
+try:
+    init_database()
+    app.logger.info("Database initialized successfully at: %s", get_database_path())
+except Exception as _db_init_err:
+    app.logger.error("Failed to initialize database on app startup: %s", _db_init_err, exc_info=True)
 
 UPLOAD_FOLDER = os.path.join(ROOT_FOLDER, "data", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -1159,15 +1166,31 @@ def login():
             "message": "Email and password are required."
         }), 400
 
-    connection = get_connection()
-
+    user = None
     try:
-        user = connection.execute(
-            "SELECT id, name, email, password FROM users WHERE email = ?",
-            (email,)
-        ).fetchone()
-    finally:
-        connection.close()
+        connection = get_connection()
+        try:
+            user = connection.execute(
+                "SELECT id, name, email, password FROM users WHERE email = ?",
+                (email,)
+            ).fetchone()
+        finally:
+            connection.close()
+    except sqlite3.OperationalError as db_err:
+        if "no such table" in str(db_err).lower():
+            app.logger.warning("Users table missing during login: %s. Reinitializing database...", db_err)
+            init_database()
+            connection = get_connection()
+            try:
+                user = connection.execute(
+                    "SELECT id, name, email, password FROM users WHERE email = ?",
+                    (email,)
+                ).fetchone()
+            finally:
+                connection.close()
+        else:
+            app.logger.error("Database query error during login: %s", db_err, exc_info=True)
+            raise
 
     if user is None or not check_password_hash(user["password"], password):
         return jsonify({
