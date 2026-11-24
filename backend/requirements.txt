@@ -1,0 +1,14 @@
+Flask
+flask-cors
+openai
+python-dotenv
+Pillow
+google-genai
+requests
+faiss-cpu
+numpy
+scikit-learn
+PyMuPDF
+python-pptx
+gTTS
+gunicorn
