@@ -36,3 +36,12 @@ data/
 
 # Downloaded AI models
 backend/whisper_models/
+
+# Entire downloaded Whisper model cache
+backend/whisper_models/
+
+# Whisper.cpp source repository
+whisper.cpp/
+
+# Unnecessary nested duplicate folder
+Bharat-study-buddy/
